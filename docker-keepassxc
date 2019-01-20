@@ -1,0 +1,58 @@
+#!/bin/bash
+
+set -e
+
+image=${DKEEPASSXC_IMAGE:-'jakubstefanski/keepassxc:latest'}
+opts=${DKEEPASSXC_OPTS:-'--detach --rm'}
+cmd=${DKEEPASSXC_CMD:-'keepassxc'}
+
+hostname=${DKEEPASSXC_HOSTNAME:-$(basename "$0")}
+username=${DKEEPASSXC_USERNAME:-$(whoami)}
+uid=${DKEEPASSXC_UID:-$(id -u)}
+gid=${DKEEPASSXC_GID:-$(id -g)}
+
+if ! id -Gn | grep -wq docker; then
+	sudo='sudo'
+fi
+
+add_user_opts() {
+	base_opts+=(--hostname="${hostname}")
+	base_opts+=(--env="USERNAME=${username}")
+	base_opts+=(--env="UID=${uid}")
+	base_opts+=(--env="GID=${gid}")
+
+	mkdir -p "${HOME}"
+	base_opts+=(--volume="${HOME}:/home/${username}")
+}
+
+add_x11_opts() {
+	# Make a X authentication file with proper permissions and
+	# mount this to a volume for the container to use
+	# http://wiki.ros.org/docker/Tutorials/GUI
+	xauth=/tmp/.docker.xauth
+	touch "${xauth}"
+	xauth nlist :0 | sed -e 's/^..../ffff/' | xauth -f "${xauth}" nmerge -
+
+	base_opts+=(--device=/dev/dri)
+
+	xsock=/tmp/.X11-unix
+	base_opts+=(--volume="${xsock}:${xsock}")
+	base_opts+=(--volume="${xauth}:${xauth}")
+	base_opts+=(--env="XAUTHORITY=${xauth}")
+	base_opts+=(--env="DISPLAY=unix${DISPLAY}")
+}
+
+add_user_opts
+add_x11_opts
+
+echo "Starting KeePassXC (${image}) with options:"
+printf "%s\n" "${base_opts[@]}"
+printf "%s\n" "${opts}"
+
+# shellcheck disable=SC2046,SC2086
+${sudo} docker run \
+	$(printf "%s " "${base_opts[@]}") \
+	${opts} \
+	"${image}" \
+	"${cmd}" \
+	"$@"
