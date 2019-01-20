@@ -2,6 +2,7 @@
 
 set -e
 
+verbose=${DKEEPASSXC_VERBOSE:-'false'}
 image=${DKEEPASSXC_IMAGE:-'jakubstefanski/keepassxc:latest'}
 opts=${DKEEPASSXC_OPTS:-'--detach --rm'}
 cmd=${DKEEPASSXC_CMD:-'keepassxc'}
@@ -45,9 +46,13 @@ add_x11_opts() {
 add_user_opts
 add_x11_opts
 
-echo "Starting KeePassXC (${image}) with options:"
-printf "%s\n" "${base_opts[@]}"
-printf "%s\n" "${opts}"
+case "${verbose}" in
+	true|TRUE|yes|y|t|1)
+		echo "Starting KeePassXC (${image}) with options:"
+		printf "%s\n" "${base_opts[@]}"
+		printf "%s\n" "${opts}"
+		;;
+esac
 
 # shellcheck disable=SC2046,SC2086
 ${sudo} docker run \
