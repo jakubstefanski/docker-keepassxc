@@ -7,35 +7,35 @@ if [ ! -f /.dockerenv ]; then
 	exit 1
 fi
 
-user_name=${USER_NAME:-keepassxc}
-user_uid=${USER_UID:-1000}
-user_gid=${USER_GID:-1000}
+username=${USERNAME:-keepassxc}
+uid=${UID:-1000}
+gid=${GID:-1000}
 
 create_user() {
-	if ! getent group "${user_name}" > /dev/null; then
-		groupadd --force --gid "${user_gid}" "${user_name}"
+	if ! getent group "${username}" > /dev/null; then
+		groupadd --force --gid "${gid}" "${username}"
 	fi
 
-	if ! getent passwd "${user_name}" > /dev/null; then
-		adduser --disabled-login --uid "${user_uid}" --gid "${user_gid}" \
-			--gecos "${user_name}" "${user_name}"
+	mkdir -p "/home/${username}"
+	if ! getent passwd "${username}" > /dev/null; then
+		useradd --uid "${uid}" --gid "${gid}" "${username}"
 	fi
 
-	chown "${user_name}:${user_name}" -R "/home/${user_name}"
+	chown "${username}:${username}" -R "/home/${username}"
 }
 
 launch_keepassxc() {
-	cd "/home/${user_name}"
-	exec sudo -HEu "${user_name}" QT_GRAPHICSSYSTEM=native "$@"
+	cd "/home/${username}"
+	exec sudo -HEu "${username}" QT_GRAPHICSSYSTEM=native "$@"
 }
 
 create_user
 
 case "$1" in
-  keepassxc)
-    launch_keepassxc "$@"
-    ;;
-  *)
-    exec "$@"
-    ;;
+	keepassxc)
+		launch_keepassxc "$@"
+		;;
+	*)
+		exec "$@"
+		;;
 esac
